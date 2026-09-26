@@ -1,0 +1,201 @@
+[path]
+conf_dir = '/etc'
+bin_dir = '/usr/bin'
+tmp_dir = '/tmp'
+log_dir = '/var/log'
+
+# ================================================================================================
+# COMMON CONFIGURATION
+# ================================================================================================
+
+[common]
+debug = False
+version = 'dev'
+commit = 'master'
+
+primary = True
+log_file = None
+binary_log_file = None
+
+set_nm_unmanaged = True
+radio_mtu = 1445
+tunnel_agg_timeout = 0.005
+mavlink_agg_timeout = 0.1
+mavlink_err_rate = True
+
+log_interval = 1000
+tx_sel_rssi_delta = 3
+tx_sel_counter_abs_delta = 3
+tx_sel_counter_rel_delta = 0.1
+
+tx_rcv_buf_size = 2097152
+
+# ===== YOUR RF SETTINGS (same on both sides when using one file) =====
+wifi_channel = 161          
+wifi_region = 'BO'
+wifi_txpower = 3000         # 30 dBm * 100 (8812eu)
+temp_measurement_interval = 2
+temp_overheat_warning = 60
+
+# ================================================================================================
+# CLUSTER – two RF nodes: this relay's own card + the OpenWrt CPE610 on eth0 (10.5.7.0/24)
+# Only read by wifibroadcast-cluster@gs (wfb-server --cluster ssh); standalone ignores it.
+# ================================================================================================
+[cluster]
+
+nodes = {
+          # Local card on the relay itself. server_address MUST be 127.0.0.1 for local cards.
+          '127.0.0.1':  { 'wlans': ['wlx00c0cab6db3b'],
+                          'server_address': '127.0.0.1' },
+
+          # OpenWrt CPE610 v2, reached over eth0. Monitor iface is created by the custom
+          # init script below; channel pinned to the link channel (161) explicitly.
+          '10.5.7.102': { 'wlans': ['phy0-mon0'],
+                          'ssh_user': 'root',
+                          'ssh_port': 22,
+                          'ssh_key': '/home/vind-admin/.ssh/wfb_cluster_ed25519',
+                          'custom_init_script': 'sh /usr/sbin/wfb-mon0.sh',
+                          'wifi_channel': 161,
+                          'wifi_txpower': None },
+        }
+
+ssh_user = 'root'
+ssh_port = 22
+ssh_key = '/home/vind-admin/.ssh/wfb_cluster_ed25519'
+custom_init_script = None
+server_address = '10.5.7.100'   # relay eth0 — the only address reachable from every node
+base_port_server = 10000
+base_port_node  = 11000
+
+# ================================================================================================
+# TOP-LEVEL PROFILES — REQUIRED FOR SYSTEMD / wfb-server
+# ================================================================================================
+
+[drone]
+streams = [{'name': 'video',   'stream_rx': None, 'stream_tx': 0x00, 'service_type': 'udp_direct_tx',  'profiles': ['base','drone_base','video','drone_video']},
+           {'name': 'mavlink', 'stream_rx': 0x10, 'stream_tx': 0x90, 'service_type': 'mavlink',        'profiles': ['base','drone_base','mavlink','drone_mavlink']},
+           {'name': 'tunnel',  'stream_rx': 0xa0, 'stream_tx': 0x20, 'service_type': 'tunnel',         'profiles': ['base','drone_base','tunnel','drone_tunnel']}]
+stats_port = 8002
+api_port  = 8102
+link_domain = "default"
+
+[gs]
+streams = [{'name': 'video',   'stream_rx': 0x00, 'stream_tx': None, 'service_type': 'udp_direct_rx',  'profiles': ['base','gs_base','video','gs_video']},
+           {'name': 'mavlink', 'stream_rx': 0x10, 'stream_tx': 0x90, 'service_type': 'mavlink',        'profiles': ['base','gs_base','mavlink','gs_mavlink']},
+           {'name': 'tunnel',  'stream_rx': 0x20, 'stream_tx': 0xa0, 'service_type': 'tunnel',         'profiles': ['base','gs_base','tunnel','gs_tunnel']}]
+stats_port = 8003
+api_port  = 8103
+link_domain = "default"
+
+# ================================================================================================
+# LOW-LEVEL PROFILES (MASTER DEFAULTS + your values)
+# ================================================================================================
+
+[base]
+stream_rx = None
+stream_tx = None
+keypair = None
+mirror = False
+
+bandwidth = 20
+force_vht = False
+
+short_gi = False
+stbc = 1
+ldpc = 1
+mcs_index = 1
+
+use_qdisc = False
+fwmark = 0
+control_port = 0
+
+[drone_base]
+keypair = 'drone.key'
+
+[gs_base]
+keypair = 'gs.key'
+
+# ================================================================================================
+# VIDEO DEFAULTS (FROM MASTER + YOUR DRONE VIDEO VALUES)
+# ================================================================================================
+
+[video]
+frame_type = 'data'
+fec_k = 8
+fec_n = 12
+fec_timeout = 0
+fec_delay = 0
+
+# ================================================================================================
+# MAVLINK DEFAULTS (FROM MASTER + YOUR DRONE MAVLINK VALUES)
+# ================================================================================================
+
+[mavlink]
+log_messages = False
+frame_type = 'data'
+
+fec_k = 1
+fec_n = 3
+fec_timeout = 0
+fec_delay = 0
+
+peer = None
+osd = None
+
+inject_rssi = True
+mavlink_sys_id = 3
+mavlink_comp_id = 68
+
+call_on_arm = None
+call_on_disarm = None
+mavlink_tcp_port = None
+
+# ================================================================================================
+# TUNNEL DEFAULTS
+# ================================================================================================
+
+[tunnel]
+frame_type = 'data'
+
+fec_k = 2
+fec_n = 4
+fec_timeout = 0
+fec_delay = 500
+
+# ================================================================================================
+# DRONE LOW-LEVEL PROFILES (YOUR EXACT OLD VALUES)
+# ================================================================================================
+
+[drone_video]
+fwmark = 20
+peer = 'listen://127.0.0.1:5602'
+#For RTSP testing 
+#peer = 'listen://0.0.0.0:5602' 
+[drone_mavlink]
+fwmark = 10
+peer = 'listen://0.0.0.0:14550'
+#peer = 'serial:/dev/ttyAMA4:921600' 
+[drone_tunnel]
+fwmark = 30
+ifname = 'drone-wfb'
+ifaddr = '10.5.5.87/24'
+default_route = False
+
+# ================================================================================================
+# GS LOW-LEVEL PROFILES (YOUR EXACT OLD VALUES)
+# ================================================================================================
+
+[gs_video]
+fwmark = 20
+peer = 'connect://10.5.6.50:5600'
+
+[gs_mavlink]
+fwmark = 10
+peer = 'connect://127.0.0.1:14560'
+
+[gs_tunnel]
+fwmark = 30
+ifname = 'gs-wfb'
+ifaddr = '10.5.5.77/24'
+default_route = False
+
