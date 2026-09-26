@@ -1,0 +1,36 @@
+# --- Upstream toolchains: NEVER commit. Re-fetch per README "Reproducing the build".
+openwrt-sdk-*/
+openwrt-imagebuilder-*/
+*.tar.zst
+*.tar.xz
+*.tar.gz
+
+# --- Upstream source clone (svpcom/wfb-ng); pinned by commit in package/*/Makefile
+/wfb-ng/
+
+# --- Build scratch
+build_dir/
+staging_dir/
+tmp/
+dl/
+bin/
+.config.old
+*.o
+*.ipk.tmp
+
+# --- Local package-signing keys (auto-generated per SDK/IB extraction, NOT secrets to share)
+key-build
+key-build.pub
+key-build.ucert
+key-build.ucert.revoke
+keys/
+
+# --- wfb-ng runtime crypto keypairs: never commit
+*.key
+!*/files/*.key
+
+# --- OS cruft
+desktop.ini
+Thumbs.db
+.DS_Store
+~$*
