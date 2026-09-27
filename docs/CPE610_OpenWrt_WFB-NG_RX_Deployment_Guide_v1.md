@@ -24,6 +24,15 @@
 > Where this manual and [`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md) disagree,
 > **`DEPLOYED_PARAMETERS.md` governs.**
 
+**Related documents.**
+
+| Document | Content |
+| --- | --- |
+| [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md) | Installation and commissioning manual: the complete sequential procedure from firmware construction through flashing, node configuration and commissioning acceptance. Use that document for a first installation; use this one for cluster-specific configuration, the systemd unit and troubleshooting. |
+| [`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md) | **Authoritative** parameter reference |
+| `../README.md` | Technical reference: WFB-NG provenance, repository layout, image records |
+| `../deployment/README.md` | Configuration records annex |
+
 ---
 
 ## 1 Purpose
@@ -86,21 +95,38 @@ published in the official OpenWrt 24.10.4 package feed and is resolved automatic
 the feed is declared in `repositories.conf`. The procedure below is the one that produced the
 deployed image.
 
+Paths are as registered in the installation manual,
+[`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md)
+§5:
+
 ```sh
-# Enter the ImageBuilder directory retrieved and extracted for this target
-cd ~/owrt/openwrt-imagebuilder-24.10.4-ath79-generic.Linux-x86_64
+export REPO=/home/pxlabs/PXLABS_OpenWrt_CPE610
+export OWRT=/home/pxlabs/owrt
+export IB=$OWRT/openwrt-imagebuilder-24.10.4-ath79-generic.Linux-x86_64
+```
+
+```sh
+# Enter the ImageBuilder tree retrieved and extracted for this target
+cd "$IB"
 
 # Apply the recorded build configuration and package feeds.
 # imagebuilder-repositories.conf declares the official feed that supplies WFB-NG 25.01-r1.
-cp /path/to/PXLABS_OpenWrt_CPE610/config/imagebuilder.config            .config
-cp /path/to/PXLABS_OpenWrt_CPE610/config/imagebuilder-repositories.conf repositories.conf
+cp "$REPO/config/imagebuilder.config"            .config
+cp "$REPO/config/imagebuilder-repositories.conf" repositories.conf
 
-# Build the sysupgrade image. The profile name uses a hyphen: tplink_cpe610-v2
+# Build the images. The profile name uses a hyphen: tplink_cpe610-v2
 make image PROFILE="tplink_cpe610-v2" \
      PACKAGES="wfb-ng wfb-ng-tun iw ca-bundle -luci -uhttpd -uhttpd-mod-ubus"
 
 # Output:
-#   bin/targets/ath79/generic/*cpe610-v2*-sysupgrade.bin
+#   $IB/bin/targets/ath79/generic/*cpe610-v2*-sysupgrade.bin
+```
+
+Confirm that WFB-NG was incorporated before flashing:
+
+```sh
+grep -i wfb "$IB/bin/targets/ath79/generic/"*.manifest
+# expected: wfb-ng - 25.01-r1   /   wfb-ng-tun - 25.01-r1
 ```
 
 **NOTE.** Profile names vary by target and release. Run `make info` in the ImageBuilder to list

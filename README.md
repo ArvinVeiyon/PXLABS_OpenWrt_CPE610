@@ -21,10 +21,11 @@ only.
 
 ## 1 Scope
 
-This repository contains the package recipes, build configuration, flashable firmware
-artifacts and deployment records for the CPE610 v2 receive node. The OpenWrt SDK (3.5 GB) and
-ImageBuilder (1.2 GB) are unmodified upstream downloads and are not committed; Section 7
-specifies their retrieval.
+This repository contains the build configuration, flashable firmware artifacts, deployment
+records and documentation for the CPE610 v2 receive node. It holds no package recipes: WFB-NG is
+supplied by the official OpenWrt package feed, as established in Section 3. The OpenWrt SDK
+(3.5 GB) and ImageBuilder (1.2 GB) are unmodified upstream downloads and are not committed;
+Section 7 specifies their retrieval.
 
 This repository covers the OpenWrt node only. Relay-side subject matter — MAVLink routing,
 QGroundControl behaviour, flight-mode selection and the relay's own service configuration — is
@@ -117,58 +118,65 @@ publishes different checksums (`ab2c7d26…` and `f2cf58ac…`) under the same v
 rebuild therefore yields a functionally equivalent image but not a byte-identical one. This is
 an upstream packaging matter and requires no action in this repository.
 
-### 3.1 Superseded 24.9.7-r2 artifacts
+### 3.1 Removed 24.9.7-r2 artifacts
 
-`package/wfb-ng/`, `package/wfb-ng-full/` and `packages/ipk/*_24.9.7-r2_*.ipk` are the
-remnants of an earlier approach that compiled WFB-NG from `svpcom/wfb-ng@3a05304` in the SDK.
-That approach was abandoned once the package was found in the official feed. These artifacts
-did not contribute to the committed image, as demonstrated by two facts:
+The following artifacts were removed from this repository on 2026-09-27:
+
+| Removed path | Content |
+| --- | --- |
+| `package/wfb-ng/` | Recipe building WFB-NG 24.9.7-r2 from `svpcom/wfb-ng@3a05304` |
+| `package/wfb-ng-full/` | Recipe for the full package, same pinned revision |
+| `packages/ipk/*_24.9.7-r2_*.ipk` | The compiled 24.9.7-r2 packages |
+
+They were the remnants of an earlier approach that compiled WFB-NG locally in the OpenWrt SDK.
+That approach was abandoned once the package was found to be published in the official feed. The
+artifacts did not contribute to the committed image, as demonstrated by two facts:
 
 - The `.ipk` files were staged in the ImageBuilder's `packages-local/` directory, whose index
   file `Packages` is zero bytes — an empty index, from which nothing can be resolved.
 - `repositories.conf` declares the local repository as `file:packages`, not `packages-local`.
 
-These artifacts are retained for historical traceability and are clearly marked as superseded.
-They must not be used as a build input.
+They were removed because their presence implied, incorrectly, that they were a build input for
+the deployed firmware. They remain available in version-control history at commit `83c4879` and
+earlier.
+
+Where a WFB-NG version newer than the official feed provides is required, obtain the package
+recipes from upstream `svpcom/wfb-ng` as specified in Section 7.2.
 
 ---
 
 ## 4 Repository layout
 
 ```
-package/                        Superseded WFB-NG package recipes (24.9.7 — see §3.1)
-  wfb-ng/                         base build: wfb_rx / wfb_tx binaries plus wfb-ng-tun
-  wfb-ng-full/                    full build: adds the Python stack, wfb-server, wfb_keygen
 config/
-  sdk.config                      SDK .config used for the superseded .ipk build
-  sdk-feeds.conf.default          feed revisions the SDK was pinned to
   imagebuilder.config             ImageBuilder .config used to build the images
   imagebuilder-repositories.conf  ImageBuilder package feeds — supplies WFB-NG 25.01-r1
+  sdk.config                      SDK .config, for building WFB-NG from source (§7.2)
+  sdk-feeds.conf.default          feed revisions the SDK was pinned to
   master.cfg                      Upstream WFB-NG template; NOT the deployed configuration
 images/
   custom/                         PXLABS images with WFB-NG included, plus manifest, SBOM, checksums
   stock/                          Unmodified OpenWrt 24.10.4 release images, retained for recovery
-packages/ipk/                     Superseded WFB-NG .ipk artifacts (24.9.7-r2 — see §3.1)
 stock-firmware/                   TP-Link vendor configuration backup taken from the unit
 deployment/                       Records of the running node, captured 2026-09-26
 docs/
   DEPLOYED_PARAMETERS.md          Authoritative parameter reference — consult first
-  *_Deployment_Guide.md           Installation and commissioning manuals
+  *_Deployment_Guide.md           Installation, commissioning and cluster deployment manuals
   *_Deployment_Guide*.docx        Source Word documents, retained unaltered
 ```
 
-### 4.1 `package/wfb-ng` compared with `package/wfb-ng-full`
+No package recipes are held in this repository. WFB-NG is supplied by the official OpenWrt feed
+per Section 3; the superseded recipes were removed per Section 3.1.
 
-The two recipes are distinct, not duplicates. Both are superseded per Section 3.1; the
-distinction is documented because it governs which package set a future build should select.
+### 4.1 Upstream package selection
 
-| Recipe | Contents | Dependencies | Notes |
+Where WFB-NG is built from source per Section 7.2, upstream provides two distinct recipes. The
+distinction governs which package set to select.
+
+| Upstream recipe | Contents | Dependencies | Notes |
 | --- | --- | --- | --- |
 | `wfb-ng` | `wfb_rx`, `wfb_tx`, `wfb_tun`; builds `wfb-ng` and `wfb-ng-tun` | `libpcap`, `libsodium`, `libstdcpp` | The package set the node runs. No `wfb-server` is present on the CPE610. |
 | `wfb-ng-full` | Adds the Python control plane, `wfb-server` as cluster manager, `wfb_tx_cmd`, `wfb_keygen`; reads `/etc/wifibroadcast.cfg` | `python3-twisted`, `pyserial`, `msgpack`, `jinja2`, `pyroute2`, `bash`, `iw`, `openssh-client` | Declares `CONFLICTS:=wfb-ng`. Substantially larger; assess against the CPE610 flash budget before selecting. |
-
-The ImageBuilder's copy of the `wfb-ng` recipe (`package/network/utils/wfb-ng/`) is
-byte-identical to the SDK's and is therefore committed once.
 
 ---
 
@@ -232,25 +240,41 @@ configuration.
 Neither upstream tree is committed; both must be retrieved. Review the reproduction limitation
 in Section 3 before relying on output checksums.
 
+The procedures below use these paths, which are the locations in use on the build host:
+
+```bash
+export REPO=/home/pxlabs/PXLABS_OpenWrt_CPE610
+export OWRT=/home/pxlabs/owrt
+export IB=$OWRT/openwrt-imagebuilder-24.10.4-ath79-generic.Linux-x86_64
+export SDK=$OWRT/openwrt-sdk-24.10.4-ath79-generic_gcc-13.3.0_musl.Linux-x86_64
+```
+
 ### 7.1 Firmware image (ImageBuilder)
 
 This procedure is complete. It requires no local WFB-NG recipe and no locally built `.ipk`
 files.
 
 ```bash
-cd ~/owrt
+mkdir -p "$OWRT" && cd "$OWRT"
 wget https://downloads.openwrt.org/releases/24.10.4/targets/ath79/generic/openwrt-imagebuilder-24.10.4-ath79-generic.Linux-x86_64.tar.zst
 tar --zstd -xf openwrt-imagebuilder-24.10.4-ath79-generic.Linux-x86_64.tar.zst
-cd openwrt-imagebuilder-24.10.4-ath79-generic.Linux-x86_64
+cd "$IB"
 
-cp /path/to/PXLABS_OpenWrt_CPE610/config/imagebuilder.config              .config
-cp /path/to/PXLABS_OpenWrt_CPE610/config/imagebuilder-repositories.conf   repositories.conf
+cp "$REPO/config/imagebuilder.config"            .config
+cp "$REPO/config/imagebuilder-repositories.conf" repositories.conf
 
 make image PROFILE=tplink_cpe610-v2 \
      PACKAGES="wfb-ng wfb-ng-tun iw ca-bundle -luci -uhttpd -uhttpd-mod-ubus"
 ```
 
-Output is written to `bin/targets/ath79/generic/`.
+Output is written to `$IB/bin/targets/ath79/generic/`.
+
+Confirm that WFB-NG was incorporated before flashing:
+
+```bash
+grep -i wfb "$IB/bin/targets/ath79/generic/"*.manifest
+# expected: wfb-ng - 25.01-r1   /   wfb-ng-tun - 25.01-r1
+```
 
 The package selection above is reconstructed from `images/custom/…manifest`, which contains
 `wfb-ng`, `wfb-ng-tun`, `iw`, `ca-bundle`, `kmod-tun`, `libsodium` and `libpcap1`, and
@@ -268,34 +292,41 @@ control deliberately.
 
 ### 7.2 Building WFB-NG from source (not required)
 
-This procedure is recorded for completeness only. It reproduces the superseded 24.9.7-r2
-artifacts described in Section 3.1 and does not reproduce the deployed image.
+This procedure is not required for the deployed configuration and does not reproduce the
+deployed image. Use it only where a WFB-NG version newer than the official feed provides is
+required — for example 25.4.27, which the relay and drone already run.
+
+The recipes formerly held in this repository were superseded and removed per Section 3.1.
+Obtain them from upstream.
 
 ```bash
-cd ~/owrt
+cd "$OWRT"
 wget https://downloads.openwrt.org/releases/24.10.4/targets/ath79/generic/openwrt-sdk-24.10.4-ath79-generic_gcc-13.3.0_musl.Linux-x86_64.tar.zst
 tar --zstd -xf openwrt-sdk-24.10.4-ath79-generic_gcc-13.3.0_musl.Linux-x86_64.tar.zst
-cd openwrt-sdk-24.10.4-ath79-generic_gcc-13.3.0_musl.Linux-x86_64
+cd "$SDK"
 
-cp -r /path/to/PXLABS_OpenWrt_CPE610/package/wfb-ng      package/
-cp -r /path/to/PXLABS_OpenWrt_CPE610/package/wfb-ng-full package/
-cp /path/to/PXLABS_OpenWrt_CPE610/config/sdk-feeds.conf.default feeds.conf.default
+git clone https://github.com/svpcom/wfb-ng.git "$OWRT/wfb-ng"
+cp -a "$OWRT/wfb-ng/openwrt/net/wfb-ng"      package/
+cp -a "$OWRT/wfb-ng/openwrt/net/wfb-ng-full" package/
 
+cp "$REPO/config/sdk-feeds.conf.default" feeds.conf.default
 ./scripts/feeds update -a && ./scripts/feeds install -a
-cp /path/to/PXLABS_OpenWrt_CPE610/config/sdk.config .config
+cp "$REPO/config/sdk.config" .config
 make defconfig
 make package/wfb-ng/compile V=s          # or package/wfb-ng-full/compile
 ```
 
-Output is written to `bin/packages/mips_24kc/base/`.
+Output is written to `$SDK/bin/packages/mips_24kc/base/`.
 
-The recipe retrieves WFB-NG from `https://github.com/svpcom/wfb-ng.git` at commit `3a05304`,
-so a local clone is not required. The clone at `~/owrt/wfb-ng` is an unmodified `master` at
-`109e1ad` (2025-12-20), 97 commits ahead of the pinned revision, and has never been built.
+The clone at `$OWRT/wfb-ng` is an unmodified `master` at `109e1ad` (2025-12-20) and has never
+been built. Select the upstream revision deliberately; `master` is not a released version.
 
-To adopt a newer WFB-NG than the feed provides — for example 25.4.27, which the relay and
-drone already run — build it for `mips_24kc` on an x86 host with network access and transfer
-the resulting `.ipk` to the node over Ethernet.
+To incorporate locally built packages into an image, stage them in the ImageBuilder's local
+package repository — the path declared in `repositories.conf` — and regenerate that
+repository's package index with `scripts/ipkg-make-index.sh` before running `make image`. An
+empty or absent index causes the packages to be silently ignored and the feed version to be
+used instead. This is the failure that produced the superseded artifacts described in
+Section 3.1.
 
 ---
 
@@ -343,6 +374,6 @@ commit is not sufficient. Details are recorded in
 | `openwrt-imagebuilder-24.10.4-…/` | 1.2 GB | Upstream; retrieve per Section 7.1 |
 | `sdk.tar.zst` | 199 MB | Exceeds the GitHub 100 MB per-file limit |
 | `ib.tar.zst` | 103 MB | Exceeds the GitHub 100 MB per-file limit |
-| `~/owrt/wfb-ng/` | 6 MB | Unmodified clone of `svpcom/wfb-ng`; pinned by commit in the recipe |
+| `/home/pxlabs/owrt/wfb-ng/` | 6 MB | Unmodified clone of `svpcom/wfb-ng`; re-cloneable from upstream, required only for Section 7.2 |
 | `dl/` archives | 425 MB | Upstream source archives, re-retrieved by the build |
 | `key-build*`, `keys/` | — | Regenerated on each extraction; signing keys are not version-controlled |

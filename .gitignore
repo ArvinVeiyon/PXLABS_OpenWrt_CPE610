@@ -1,11 +1,11 @@
-# --- Upstream toolchains: NEVER commit. Re-fetch per README "Reproducing the build".
+# --- Upstream toolchains: NEVER commit. Re-fetch per README section 7.
 openwrt-sdk-*/
 openwrt-imagebuilder-*/
 *.tar.zst
 *.tar.xz
 *.tar.gz
 
-# --- Upstream source clone (svpcom/wfb-ng); pinned by commit in package/*/Makefile
+# --- Upstream source clone (svpcom/wfb-ng); re-cloneable, needed only to build from source
 /wfb-ng/
 
 # --- Build scratch

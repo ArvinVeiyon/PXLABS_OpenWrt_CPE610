@@ -226,9 +226,9 @@ improvement, but it does not describe the current configuration.
 The node's 25.01-r1 packages are supplied by the official OpenWrt 24.10.4 package feed, not
 built from a recipe in this repository. See README §3 for the provenance evidence.
 
-The superseded 24.9.7-r2 recipes and `.ipk` artifacts under `package/` and `packages/ipk/`
-did not contribute to the deployed image and are not a version discrepancy in the deployed
-system. See README §3.1.
+The superseded 24.9.7-r2 recipes and `.ipk` artifacts formerly held under `package/` and
+`packages/ipk/` did not contribute to the deployed image and were not a version discrepancy in
+the deployed system. They were removed from this repository on 2026-09-27. See README §3.1.
 
 ### 8.1 Assessment of the version skew
 

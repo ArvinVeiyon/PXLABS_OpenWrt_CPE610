@@ -69,9 +69,10 @@ cluster start through `custom_init_script`. A node rebooted in isolation therefo
 monitor interface until the relay's cluster service is restarted.
 
 **3.3 The deployed WFB-NG version is 25.01-r1.**
-These packages are supplied by the official OpenWrt 24.10.4 package feed. They are not built
-from the superseded 24.9.7-r2 recipes retained under `package/` and `packages/ipk/`, which did
-not contribute to the deployed image. The provenance evidence is recorded in README §3.
+These packages are supplied by the official OpenWrt 24.10.4 package feed. They were not built
+from the superseded 24.9.7-r2 recipes formerly held under `package/` and `packages/ipk/`, which
+did not contribute to the deployed image and were removed from this repository on 2026-09-27.
+The provenance evidence is recorded in README §3.
 
 ---
 
