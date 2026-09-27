@@ -18,6 +18,16 @@ governs.
 node records in [`../deployment/`](../deployment/). Verification was performed on 2026-09-26,
 the date on which two-node RF cluster operation was first confirmed end to end.
 
+**Related documents.**
+
+| Document | Content |
+| --- | --- |
+| [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md) | Installation and commissioning procedure |
+| [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md) | Cluster configuration, systemd unit, cluster troubleshooting |
+| [`CPE610_Operations_and_Maintenance_Manual.md`](CPE610_Operations_and_Maintenance_Manual.md) | The node in service: routine checks, logging, restart order, fault isolation, recovery and rollback |
+| `../README.md` | Build reproduction, image records, repository layout |
+| `../deployment/README.md` | The configuration in force on the node, as captured |
+
 **Origin of the discrepancies.** `config/master.cfg` is the upstream WFB-NG template, not the
 deployed configuration. It was labelled as the configuration used for this deployment, and both
 Word-sourced manuals were written against it and against earlier bench values. That single

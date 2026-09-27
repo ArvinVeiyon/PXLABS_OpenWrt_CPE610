@@ -162,6 +162,7 @@ deployment/                       Records of the running node, captured 2026-09-
 docs/
   DEPLOYED_PARAMETERS.md          Authoritative parameter reference — consult first
   *_Deployment_Guide.md           Installation, commissioning and cluster deployment manuals
+  *_Operations_and_Maintenance_*  In-service operation, fault isolation, recovery and rollback
   *_Deployment_Guide*.docx        Source Word documents, retained unaltered
 ```
 

@@ -30,6 +30,7 @@
 | --- | --- |
 | [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md) | Installation and commissioning manual: the complete sequential procedure from firmware construction through flashing, node configuration and commissioning acceptance. Use that document for a first installation; use this one for cluster-specific configuration, the systemd unit and troubleshooting. |
 | [`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md) | **Authoritative** parameter reference |
+| [`CPE610_Operations_and_Maintenance_Manual.md`](CPE610_Operations_and_Maintenance_Manual.md) | Operations and maintenance: the node in service — routine checks, logging, restart order, fault isolation, recovery and rollback |
 | `../README.md` | Technical reference: WFB-NG provenance, repository layout, image records |
 | `../deployment/README.md` | Configuration records annex |
 

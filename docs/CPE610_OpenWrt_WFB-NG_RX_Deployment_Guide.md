@@ -895,5 +895,6 @@ Where the deployed configuration is changed, update
 | --- | --- |
 | [`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md) | **Authoritative** parameter reference: RF, cluster topology, addressing, ports, streams and FEC, security findings |
 | [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md) | Cluster deployment manual: systemd unit definition, per-profile environment, troubleshooting |
+| [`CPE610_Operations_and_Maintenance_Manual.md`](CPE610_Operations_and_Maintenance_Manual.md) | Operations and maintenance: routine checks, logging, restart order, fault isolation, recovery and rollback, replacement units |
 | `../README.md` | Technical reference: WFB-NG provenance, repository layout, image records, exclusions |
 | `../deployment/README.md` | Configuration records annex: the configuration in force on the node |
