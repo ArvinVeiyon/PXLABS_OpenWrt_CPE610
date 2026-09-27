@@ -1,119 +1,162 @@
-# CPE610 + WFB-NG RX Node Deployment Guide (cluster / distributed)
+# CPE610 and WFB-NG Receive Node — Cluster Deployment Manual
 
-*OpenWrt 24.10.x · ImageBuilder firmware · RX-only CPE node + relay-station cluster (ssh mode)*  
-*Original document dated 27 Dec 2025.*
+| Field | Value |
+| --- | --- |
+| Document type | Operational deployment manual (distributed / cluster operation) |
+| Applies to | TP-Link CPE610 v2 receive node and relay-station cluster server, SSH cluster mode |
+| Revision | 1.1 |
+| Date | 2026-09-27 |
+| Status | Current |
+| Source document | `CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.docx`, dated 27 Dec 2025, converted 2026-09-26 |
 
-> ### ⚠ Read `docs/DEPLOYED_PARAMETERS.md` first
+> **PRECEDENCE — READ BEFORE USE**
 >
-> This guide is the **narrative build/deploy procedure** and is kept for its reasoning and
-> command sequences. It is **not** the authority on parameter values. It was written against
-> `config/master.cfg` — which is the *upstream wfb-ng template*, not the deployed config —
-> and against earlier bench values.
+> This manual provides the procedure and the supporting rationale. It is **not** the authority
+> on parameter values. It was written against `config/master.cfg`, which is the upstream WFB-NG
+> template rather than the deployed configuration, and against earlier bench values.
 >
-> Values that were wrong here have been corrected inline and marked *(corrected)* or
-> `# CORRECTED`. Corrected here: RF channel 157 → **161** (5805 MHz), `ssh_key` path, and the `api_port` / `stats_port` placement. This revision’s IP plan (10.5.7.0/24) is already correct and matches deployment.
+> Values found to be incorrect have been corrected in place and are annotated *(corrected)* or
+> `# CORRECTED`. The corrections applied are: RF channel 157 → **161** (5805 MHz); the
+> `ssh_key` path; `custom_init_script`, which requires an explicit `sh` prefix; and the
+> placement of `api_port` and `stats_port`. The addressing plan in this revision
+> (10.5.7.0/24) is already correct and matches deployment.
 >
-> Converted from `CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.docx` on 2026-09-26. Where this file and
-> [`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md) disagree, **DEPLOYED_PARAMETERS.md wins.**
+> Where this manual and [`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md) disagree,
+> **`DEPLOYED_PARAMETERS.md` governs.**
 
 ---
 
-## 1. Purpose
+## 1 Purpose
 
-This document describes the production-ready deployment for an RX-only TP-Link CPE610 running OpenWrt 24.10.x as a WFB-NG cluster node, controlled from a Raspberry Pi 5 relay station acting as the WFB-NG cluster server (center node). The laptop/ground station connects to the relay over Wi‑Fi; the relay connects to the CPE over Ethernet (LAN).
-Key goals:
-- Avoid overlay space exhaustion on OpenWrt: WFB-NG is baked into a custom sysupgrade image using ImageBuilder (preferred).
-- CPE runs only the monitor interface setup (radio config). WFB traffic processes (wfb_rx/wfb_tx) are started remotely by the relay via cluster ssh mode.
-- Relay uses cluster ssh mode with BOTH: (a) remote CPE node and (b) local USB Wi‑Fi adapter as a local node (127.0.0.1).
-- Relay exports decoded video/MAVLink to the Laptop (10.5.6.50).
+This manual specifies the production deployment of a receive-only TP-Link CPE610 running
+OpenWrt 24.10.x as a WFB-NG cluster node, controlled from a Raspberry Pi 5 relay station acting
+as the WFB-NG cluster server (centre node). The laptop or ground station connects to the relay
+over Wi-Fi; the relay connects to the CPE610 over Ethernet.
 
-## 2. Network Topology and IP Plan
+Deployment objectives:
 
-Fixed addresses used in this setup:
+- Avoid overlay-capacity exhaustion on the node. WFB-NG is incorporated into a custom
+  sysupgrade image by means of the OpenWrt ImageBuilder.
+- Restrict the node's local responsibility to monitor-interface configuration. The WFB-NG
+  traffic processes, `wfb_rx` and `wfb_tx`, are started remotely by the relay in SSH cluster
+  mode.
+- Operate the relay in SSH cluster mode with both node types present: the remote CPE610 node,
+  and the relay's own USB Wi-Fi adapter as a local node at `127.0.0.1`.
+- Export decoded video and MAVLink from the relay to the laptop at 10.5.6.50.
 
-| Component / Interface | IP / Notes |
+---
+
+## 2 Network topology and addressing
+
+| Component or interface | Address and notes |
 | --- | --- |
-| Laptop (Ground Station) | 10.5.6.50/24 (Wi‑Fi to Relay) |
-| Relay Station Wi‑Fi interface (to Laptop) | 10.5.6.101/24 |
-| Relay Station LAN interface (to CPE) | 10.5.7.100/24  (Cluster server_address) |
-| CPE610 LAN IP | 10.5.7.102/24 (cluster node) |
+| Laptop (ground station) | 10.5.6.50/24, Wi-Fi to the relay |
+| Relay Wi-Fi interface, towards the laptop | 10.5.6.101/24 |
+| Relay LAN interface, towards the node | 10.5.7.100/24 — the cluster `server_address` |
+| CPE610 LAN address | 10.5.7.102/24, cluster node |
 
 Physical connections:
-- Laptop ⇄ Relay: Wi‑Fi (10.5.6.0/24).
-- Relay ⇄ CPE610: Ethernet (10.5.7.0/24).
-- CPE610 radio: monitor interface (phy0-mon0) on the chosen WFB channel (**deployed: ch 161 / 5805 MHz / HT20**).
 
-## 3. OpenWrt Firmware Strategy (IMPORTANT)
+| Link | Medium | Subnet |
+| --- | --- | --- |
+| Laptop ⇄ relay | Wi-Fi | 10.5.6.0/24 |
+| Relay ⇄ CPE610 | Ethernet | 10.5.7.0/24 |
+| Drone ⇄ CPE610 radio | 5 GHz monitor interface `phy0-mon0` | Channel 161 / 5805 MHz / HT20 *(corrected)* |
 
-Because the CPE610 overlay storage is limited, installing WFB-NG via opkg/ipk on-device can quickly exhaust overlay space. The recommended method is to build a custom sysupgrade image using OpenWrt ImageBuilder and bake in the required WFB-NG packages.
-References:
-- • WFB-NG Distributed Operation wiki: https://github.com/svpcom/wfb-ng/wiki/Distributed-operation
-- • WFB-NG Setup HOWTO: https://github.com/svpcom/wfb-ng/wiki/Setup-HOWTO
+---
 
-### 3.1 Build Custom sysupgrade Image using ImageBuilder
+## 3 Firmware strategy
 
-Use ImageBuilder matching your target/subtarget. Example below must match your CPE610 hardware and the OpenWrt release.
-8.1 Download ImageBuilder (Custom sysupgrade build; recommended to avoid overlay space usage from opkg/ipk installs)
-Bake required packages into firmware (WFB-NG baked-in via ImageBuilder):
+Overlay storage on the CPE610 is limited, and installing WFB-NG on the device by way of
+`opkg` exhausts it. The required method is to build a custom sysupgrade image with the WFB-NG
+packages incorporated, using the OpenWrt ImageBuilder.
+
+Upstream references:
+
+- WFB-NG distributed operation: https://github.com/svpcom/wfb-ng/wiki/Distributed-operation
+- WFB-NG setup procedure: https://github.com/svpcom/wfb-ng/wiki/Setup-HOWTO
+
+### 3.1 Build the custom sysupgrade image
+
+Use an ImageBuilder matching the target, subtarget and OpenWrt release of the device.
+
+**CORRECTED.** The source document instructed the operator to clone `svpcom/wfb-ng` and copy
+its package recipe into the ImageBuilder tree. That step is unnecessary. WFB-NG 25.01-r1 is
+published in the official OpenWrt 24.10.4 package feed and is resolved automatically, provided
+the feed is declared in `repositories.conf`. The procedure below is the one that produced the
+deployed image.
 
 ```sh
-# IMPORTANT:
-# - We bake WFB-NG into the firmware image (sysupgrade) to avoid overlay space constraints.
-# - This method builds one clean image you can flash and reuse for other CPE610 v2 units.
-
-# One-time: clone WFB-NG (contains the OpenWrt package recipe)
-mkdir -p ~/owrt && cd ~/owrt
-git clone https://github.com/svpcom/wfb-ng.git
-
-# Enter the ImageBuilder directory you downloaded/extracted above
+# Enter the ImageBuilder directory retrieved and extracted for this target
 cd ~/owrt/openwrt-imagebuilder-24.10.4-ath79-generic.Linux-x86_64
 
-# Inject (or refresh) the WFB-NG package recipe into ImageBuilder
-mkdir -p package/network/utils
-cp -a ~/owrt/wfb-ng/openwrt/net/wfb-ng package/network/utils/
-# OPTIONAL (recommended): bake our CPE radio scripts into firmware using FILES="files"
-# Example files tree (created later in this guide):
-#   files/usr/sbin/wfb-mon0.sh
-#   files/etc/init.d/wfb-mon0
-#   files/etc/config/wireless   (optional – if you want Wi‑Fi disabled by default)
+# Apply the recorded build configuration and package feeds.
+# imagebuilder-repositories.conf declares the official feed that supplies WFB-NG 25.01-r1.
+cp /path/to/PXLABS_OpenWrt_CPE610/config/imagebuilder.config            .config
+cp /path/to/PXLABS_OpenWrt_CPE610/config/imagebuilder-repositories.conf repositories.conf
 
-# Build the sysupgrade image (correct profile name uses a dash: tplink_cpe610-v2)
-make image PROFILE="tplink_cpe610-v2" PACKAGES="wfb-ng wfb-ng-tun" FILES="files"
+# Build the sysupgrade image. The profile name uses a hyphen: tplink_cpe610-v2
+make image PROFILE="tplink_cpe610-v2" \
+     PACKAGES="wfb-ng wfb-ng-tun iw ca-bundle -luci -uhttpd -uhttpd-mod-ubus"
 
-# Output sysupgrade image will be under:
+# Output:
 #   bin/targets/ath79/generic/*cpe610-v2*-sysupgrade.bin
 ```
 
-Notes:
-• PROFILE name differs by target/version; run `make info` in ImageBuilder to list valid PROFILE names.
-• If you already have a working build command in your environment, keep using it and only ensure that `wfb-ng` is included.
-• The purpose here is to avoid post-install via opkg on the CPE.
+**NOTE.** Profile names vary by target and release. Run `make info` in the ImageBuilder to list
+the valid names.
 
-### 3.2 Flash sysupgrade image
+**NOTE — optional `FILES=` overlay.** The ImageBuilder accepts `FILES="files"` to incorporate a
+file tree into the image, for example:
+
+```
+files/usr/sbin/wfb-mon0.sh
+files/etc/init.d/wfb-mon0
+files/etc/config/wireless
+```
+
+This option was **not** used for the deployed image. The monitor-interface script was installed
+on the unit separately, per Section 4.3. Using `FILES=` would make the node self-sufficient at
+boot and is a sound improvement, but it does not describe the deployed configuration.
+
+### 3.2 Flash the sysupgrade image
 
 ```sh
-# Copy the generated sysupgrade.bin to the CPE (example)
+# Transfer the image to the node
 scp openwrt-24.10.4-...-tplink_cpe610-v2-squashfs-sysupgrade.bin root@10.5.7.102:/tmp/
 
-# Flash (CPE)
+# Write the image, on the node
 ssh root@10.5.7.102
 sysupgrade -n /tmp/openwrt-24.10.4-...-tplink_cpe610-v2-squashfs-sysupgrade.bin
 ```
 
-After reboot, verify WFB-NG is present (no opkg install required):
-wfb-server --version || /usr/bin/wfb-server --version
-opkg list-installed | grep -i wfb-ng || true
+**CAUTION.** The SSH session terminates during the upgrade. Allow 2 to 3 minutes for the reboot
+and do not remove power during this period.
 
-## 4. CPE610 Configuration (RX Node)
-
-The CPE610 runs OpenWrt and provides a monitor interface (phy0-mon0) for WFB-NG. The relay station starts the WFB processes remotely via cluster ssh mode.
-
-### 4.1 Network on CPE (LAN)
-
-Ensure br-lan has the static address:
+After reboot, confirm that WFB-NG is present and that no `opkg install` step is required:
 
 ```sh
-# /etc/config/network (example)
+opkg list-installed | grep -i wfb-ng
+ls -l /usr/bin/wfb_*
+```
+
+**NOTE.** `wfb-server` is not present on the node, and its absence is correct. The node runs the
+base `wfb-ng` and `wfb-ng-tun` pair and is driven by the relay. Commands of the form
+`wfb-server --version` will fail on the node and are not a valid verification step there.
+
+---
+
+## 4 Node configuration
+
+The node provides a monitor interface, `phy0-mon0`, for WFB-NG. The relay starts the WFB-NG
+processes remotely in SSH cluster mode.
+
+### 4.1 Node LAN interface
+
+Confirm that `br-lan` carries the static address:
+
+```
+# /etc/config/network
 config interface 'lan'
     option device 'br-lan'
     option proto 'static'
@@ -122,65 +165,79 @@ config interface 'lan'
     option ip6assign '60'
 ```
 
-### 4.2 Disable normal Wi‑Fi management on the CPE radio
+### 4.2 Disable normal Wi-Fi management on the node radio
 
-The CPE radio is dedicated to WFB monitor mode. If the radio is also configured as STA/AP, it will conflict with monitor mode.
+The radio is dedicated to WFB monitor mode. A concurrent station or access-point configuration
+conflicts with monitor mode. Management access remains available over Ethernet at 10.5.7.102.
 
 ```sh
-# /etc/config/wireless
-# Keep radio present but disable regular wifi-iface sections
-# (You can still manage the CPE via Ethernet at 10.5.7.102)
 uci set wireless.radio0.disabled='1'
 uci commit wireless
 wifi down
 ```
 
-### 4.3 Create monitor interface at boot (wfb-mon0.sh)
+### 4.3 Install the monitor-interface script
 
-OpenWrt 24.10+ may not create a Wi‑Fi interface when Wi‑Fi is disabled, and WFB cluster ssh init expects a monitor interface. Therefore we use a custom init script to reliably create and configure phy0-mon0.
-Create /usr/sbin/wfb-mon0.sh on the CPE:
+OpenWrt 24.10 and later may not create a Wi-Fi interface when the radio is disabled, while the
+WFB-NG cluster initialisation requires a monitor interface to be present. A configuration
+script is therefore used to create and configure `phy0-mon0` deterministically.
+
+The listing below is the script in force on the deployed unit.
 
 ```sh
-cat >/usr/sbin/wfb-mon0.sh <<'EOF'
-
+cat > /usr/sbin/wfb-mon0.sh <<'EOF'
 #!/bin/sh
-```
-
 set -e
 
-```sh
-# Country/reg (optional but good)
+# Regulatory domain. See the note below: this value is not the effective domain.
 iw reg set IN 2>/dev/null || true
-# Recreate monitor iface cleanly
+
+# Recreate the monitor interface cleanly
 iw dev phy0-mon0 del 2>/dev/null || true
 iw phy phy0 interface add phy0-mon0 type monitor flags otherbss || true
+
 ip link set phy0-mon0 up
-# IMPORTANT: set channel explicitly (DEPLOYED: 5805 MHz = ch161)
-# Choose ONE of these:
+
+# Set the channel explicitly. DEPLOYED: channel 161 = 5805 MHz.
+# Use one of the following:
 iw dev phy0-mon0 set channel 161 HT20 || true
 # or: iw dev phy0-mon0 set freq 5805 HT20 || true
-iw dev phy0-mon0 set monitor otherbss 2>/dev/null || true
 
+iw dev phy0-mon0 set monitor otherbss 2>/dev/null || true
 EOF
+
 chmod +x /usr/sbin/wfb-mon0.sh
 ```
 
-### 4.4 Enable wfb-mon0 at startup (OpenWrt init script)
+**NOTE — regulatory domain.** The `iw reg set IN` call in this script is not the effective
+setting. The WFB-NG cluster initialisation runs this script first and then re-applies
+`iw reg set BO` from the `[cluster]` section, so `BO` is the domain in force. Do not amend the
+`IN` value on the assumption that it governs; see `DEPLOYED_PARAMETERS.md` §2.1.
 
-This is a boot-time radio setup service. It configures the monitor interface and exits. Because it’s a one-shot setup, `status` may not show it as running — verify with `iw dev`.
+### 4.4 Optional: raise the monitor interface at boot
+
+**NOTE — not the deployed configuration.** The service described in this section is **not**
+installed on the deployed node. `phy0-mon0` is created by the relay at each cluster start
+through `custom_init_script`. A node rebooted in isolation therefore has no monitor interface
+until the relay's cluster service is restarted. See `DEPLOYED_PARAMETERS.md` §7.
+
+This is a boot-time configuration service: it configures the interface and exits. Because it is
+a one-shot service, `status` may not report it as running. Confirm the result with `iw dev`.
 
 ```sh
-cat >/etc/init.d/wfb-mon0 <<'EOF'
-
+cat > /etc/init.d/wfb-mon0 <<'EOF'
 #!/bin/sh /etc/rc.common
 START=25
 STOP=10
+
 start() {
     /bin/sh /usr/sbin/wfb-mon0.sh
 }
+
 stop() {
     ip link del phy0-mon0 2>/dev/null || true
 }
+
 status() {
     if iw dev 2>/dev/null | grep -q "Interface phy0-mon0"; then
         echo "OK: phy0-mon0 exists"
@@ -191,8 +248,8 @@ status() {
         return 1
     fi
 }
-
 EOF
+
 chmod +x /etc/init.d/wfb-mon0
 
 /etc/init.d/wfb-mon0 enable
@@ -203,89 +260,127 @@ Verification:
 
 ```sh
 iw dev | grep -A3 -E 'phy0-mon0|type monitor'
-ifconfig phy0-mon0 || ip link show phy0-mon0
+ip link show phy0-mon0
 ```
 
-### 4.5 Shutdown / reboot commands (CPE)
+### 4.5 Shutdown and reboot
 
 ```sh
-# Clean shutdown
-poweroff
-
-# Reboot
-reboot
+poweroff        # clean shutdown
+reboot          # restart
 ```
 
-## 5. Relay Station (Cluster Server) Setup
+**CAUTION.** Rebooting the node in isolation leaves it without a monitor interface until the
+relay's cluster service is restarted. Where the node is restarted during maintenance, restart
+`wifibroadcast-cluster@gs.service` on the relay afterwards.
 
-Relay station runs WFB-NG server (center node) and controls remote nodes (CPE + optional local node) using cluster ssh mode.
+---
 
-### 5.1 Network on Relay
+## 5 Relay configuration (cluster server)
 
-Ensure these two interfaces are up and reachable:
-- Wi‑Fi towards Laptop: 10.5.6.101/24 (Laptop = 10.5.6.50).
-- LAN towards CPE: 10.5.7.100/24 (CPE = 10.5.7.102).
+The relay runs the WFB-NG server as the centre node and controls the remote node and the
+optional local node in SSH cluster mode.
 
-### 5.2 WFB-NG cluster ssh keys (IMPORTANT)
+### 5.1 Relay interfaces
 
-Cluster ssh mode requires passwordless SSH from relay (root) to each node, including localhost (127.0.0.1) if you use a local node.
-#Fix /bin/bash missing (OpenWrt)
-On CPE:
+Confirm that both interfaces are up and reachable:
+
+| Interface | Address | Peer |
+| --- | --- | --- |
+| Wi-Fi, towards the laptop | 10.5.6.101/24 | Laptop 10.5.6.50 |
+| LAN, towards the node | 10.5.7.100/24 | CPE610 10.5.7.102 |
+
+### 5.2 Cluster SSH keys
+
+SSH cluster mode requires passwordless SSH from the relay to every node, including `127.0.0.1`
+where a local node is used.
+
+**Provide a `/bin/bash` path on the node.** Cluster SSH invokes remote commands through
+`/bin/bash`, which OpenWrt does not provide. In its absence the error `ash: /bin/bash: not
+found` is raised. On the node:
 
 ```sh
 ln -s /bin/ash /bin/bash 2>/dev/null || true
 /bin/bash -c 'echo bash_shim_ok'
+```
 
-# On relay (as root)
+**Generate the cluster key on the relay.** The path below is the deployed path.
+
+```sh
 sudo -i
-ssh-keygen -t ed25519 -f /root/.ssh/wfb_cluster_ed25519 -N "" -C "wfb-cluster"
-cat /root/.ssh/wfb_cluster_ed25519.pub >> /root/.ssh/authorized_keys
-chmod 700 /root/.ssh
+ssh-keygen -t ed25519 -f /home/vind-admin/.ssh/wfb_cluster_ed25519 -N "" -C "wfb-cluster"
+cat /home/vind-admin/.ssh/wfb_cluster_ed25519.pub >> /root/.ssh/authorized_keys
+chmod 700 /home/vind-admin/.ssh
+chmod 600 /home/vind-admin/.ssh/wfb_cluster_ed25519
 chmod 600 /root/.ssh/authorized_keys
 
-# Test localhost auth (must work)
-ssh -i /root/.ssh/wfb_cluster_ed25519 root@127.0.0.1 'echo LOCAL_NODE_OK'
+# Verify local-node authentication; this must succeed
+ssh -i /home/vind-admin/.ssh/wfb_cluster_ed25519 root@127.0.0.1 'echo LOCAL_NODE_OK'
 ```
 
-Copy the same public key to the CPE (authorized_keys):
+**CORRECTED.** The source document specified `/root/.ssh/wfb_cluster_ed25519`. The deployed
+path is `/home/vind-admin/.ssh/wfb_cluster_ed25519`.
+
+**Authorise the same key on the node.**
 
 ```sh
-# On relay:
-ssh-copy-id -i /root/.ssh/wfb_cluster_ed25519.pub root@10.5.7.102
+# On the relay
+ssh-copy-id -i /home/vind-admin/.ssh/wfb_cluster_ed25519.pub root@10.5.7.102
 
-# Test:
-ssh -i /root/.ssh/wfb_cluster_ed25519 root@10.5.7.102 'echo CPE_NODE_OK'
+# Verify
+ssh -i /home/vind-admin/.ssh/wfb_cluster_ed25519 root@10.5.7.102 'echo CPE_NODE_OK'
 ```
 
-### 5.3 /etc/wifibroadcast.cfg (cluster + local node)
+Expected outputs: `LOCAL_NODE_OK` and `CPE_NODE_OK`.
 
-Below is the critical cluster section. The key points:
-• server_address MUST be the relay LAN IP (10.5.7.100).
-• Add the CPE node (10.5.7.102) with its monitor interface (phy0-mon0).
-• Add a local node entry (127.0.0.1) when you want to include the relay’s local USB Wi‑Fi adapter in the cluster.
-• For RX-only CPE node, set wifi_txpower='off' and (optionally) keep only rx usage.
+### 5.3 `/etc/wifibroadcast.cfg` — cluster and local node
 
-```sh
+Requirements for the cluster section:
 
+- `server_address` must be the relay LAN address, 10.5.7.100. It is the only address every node
+  can reach.
+- The CPE610 node is declared at 10.5.7.102 with its monitor interface, `phy0-mon0`.
+- A local node entry at `127.0.0.1` is declared when the relay's own USB adapter is to
+  participate in the cluster.
+- For the receive-only node, `wifi_txpower` is set to `None`, the driver default.
+
+```python
 [cluster]
-nodes = {'127.0.0.1': {'wlans': ['wlx00c0cab6db3b']}, '10.5.7.102': {'wlans': ['phy0-mon0'],'wifi_txpower': None,'custom_init_script': '/usr/sbin/wfb-mon0.sh'}}
+nodes = {
+  '127.0.0.1':  { 'wlans': ['wlx00c0cab6db3b'] },
+  '10.5.7.102': { 'wlans': ['phy0-mon0'],
+                  'wifi_txpower': None,
+                  'custom_init_script': 'sh /usr/sbin/wfb-mon0.sh' }
+}
 ssh_user = 'root'
 ssh_port = 22
-ssh_key = '/home/vind-admin/.ssh/wfb_cluster_ed25519'   # DEPLOYED path, not /root
-```
-
+ssh_key = '/home/vind-admin/.ssh/wfb_cluster_ed25519'   # CORRECTED: deployed path, not /root
 server_address = '10.5.7.100'
 base_port_server = 10000
 base_port_node = 11000
-# CORRECTED: api_port/stats_port are NOT read from [cluster].
-# They belong in the profile section:  [gs] stats_port = 8003 / api_port = 8103
-Note: The `custom_init_script` is especially important on OpenWrt 24.10+ where Wi‑Fi may not be initialized if disabled (see Distributed Operation wiki).
 
-### 5.4 Systemd service: wifibroadcast-cluster@gs.service (IMPORTANT)
+# CORRECTED: api_port and stats_port are NOT read from [cluster].
+# They belong in the profile section:
+#   [gs]
+#   stats_port = 8003
+#   api_port   = 8103
+```
 
-Cluster mode MUST NOT use `--wlans`. The server reads `[cluster] nodes` from /etc/wifibroadcast.cfg. Use the following unit as the authoritative service for cluster operation.
+**CORRECTED — `custom_init_script` requires the `sh` prefix.** The script is invoked over
+cluster SSH. Without the explicit interpreter the execution fails against the node's `ash`
+shell and `phy0-mon0` is never created.
 
-```sh
+**NOTE.** `custom_init_script` is of particular importance on OpenWrt 24.10 and later, where the
+radio may not be initialised if it is disabled. See the WFB-NG distributed-operation reference
+in Section 3.
+
+### 5.4 Systemd unit `wifibroadcast-cluster@gs.service`
+
+**CAUTION.** Cluster mode must not use `--wlans`. The server reads `[cluster] nodes` from
+`/etc/wifibroadcast.cfg`. The unit below is the authoritative service definition for cluster
+operation.
+
+```ini
 # /etc/systemd/system/wifibroadcast-cluster@.service
 [Unit]
 Description=WFB-ng CLUSTER server, profile %i
@@ -296,13 +391,12 @@ After=network-online.target
 
 [Service]
 Type=simple
-# common environment
+# Common environment
 EnvironmentFile=/etc/default/wifibroadcast
-# per-profile environment
+# Per-profile environment
 EnvironmentFile=-/etc/default/wifibroadcast.%i
 
-# IMPORTANT: cluster mode uses config [cluster] nodes from /etc/wifibroadcast.cfg
-# No --wlans here.
+# Cluster mode reads [cluster] nodes from /etc/wifibroadcast.cfg. Do not add --wlans.
 ExecStart=/bin/bash -c "exec /usr/bin/wfb-server --profiles $(echo %i | tr : ' ') --cluster ${WFB_CLUSTER_MODE:-ssh}"
 
 KillMode=mixed
@@ -322,50 +416,92 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now wifibroadcast.service
 sudo systemctl enable --now wifibroadcast-cluster@gs.service
 
-# Logs
+# Follow the service log
 journalctl -u wifibroadcast-cluster@gs.service -f
 ```
 
-### 5.5 What is /etc/default/wifibroadcast.gs ?
+### 5.5 Per-profile environment file
 
-Systemd units can load environment variables per profile. `/etc/default/wifibroadcast.gs` is an optional per-profile file used to set variables only for the `gs` profile (for example choosing cluster mode ssh vs manual).
+Systemd units load environment variables per profile. `/etc/default/wifibroadcast.gs` is an
+optional file that sets variables for the `gs` profile only — for example, selecting the cluster
+mode.
 
 ```sh
 # /etc/default/wifibroadcast.gs
-# cluster mode: ssh or manual
+# Cluster mode: ssh or manual
 WFB_CLUSTER_MODE=ssh
 ```
 
-## 6. Troubleshooting Cheatsheet
+---
 
-### 6.1 'argument --wlans not allowed with --cluster'
+## 6 Troubleshooting
 
-This is expected: in cluster mode you do NOT pass --wlans on the server command line. Instead, define all node wlans in /etc/wifibroadcast.cfg under [cluster]. Use wifibroadcast-cluster@gs.service (provided in this document).
+### 6.1 `argument --wlans not allowed with --cluster`
 
-### 6.2 'Unable to decrypt packet'
+Expected behaviour. In cluster mode `--wlans` is not passed on the server command line. Declare
+all node interfaces in `/etc/wifibroadcast.cfg` under `[cluster]`, and start the server through
+`wifibroadcast-cluster@gs.service` as specified in Section 5.4.
 
-Usually indicates key mismatch (gs.key vs drone.key) or wrong peer. Confirm that /etc/gs.key on relay matches the transmitter side keypair, and that the configured channel/bandwidth match.
+### 6.2 `Unable to decrypt packet`
 
-### 6.3 'ip: SIOCGIFFLAGS: No such device' on the CPE node
+Indicates a keypair mismatch between `gs.key` and `drone.key`, or an incorrect peer. Confirm
+that `/etc/gs.key` on the relay corresponds to the transmitting station's keypair, and that the
+configured channel and bandwidth match on both ends.
 
-The monitor interface is missing. Ensure /usr/sbin/wfb-mon0.sh exists and is executable, and that /etc/init.d/wfb-mon0 is enabled and ran successfully. Verify with `iw dev`.
+### 6.3 `ip: SIOCGIFFLAGS: No such device` on the node
 
-### 6.4 Cluster ssh fails (Permission denied)
+The monitor interface is absent. Confirm that `/usr/sbin/wfb-mon0.sh` exists and is executable
+on the node. Where the boot-time service of Section 4.4 is in use, confirm that it is enabled
+and completed successfully. Verify with `iw dev`.
 
-Ensure the relay’s /root/.ssh/wfb_cluster_ed25519.pub is in each node’s /root/.ssh/authorized_keys (including localhost if using 127.0.0.1 as a node).
+In the deployed configuration the interface is created by the relay at cluster start, so this
+error is also the expected state of a node that has been rebooted in isolation. Restart
+`wifibroadcast-cluster@gs.service` on the relay.
 
-### 6.5 MCS tuning note (why RSSI/‘dBm’ may look better at MCS 1)
+### 6.4 Cluster SSH reports `Permission denied`
 
-Lower MCS uses more robust modulation/coding, which often improves effective link quality and reduces packet loss. Some OSD/telemetry displays may show higher (better) RSSI/quality when the link is not saturating or losing frames. Treat MCS as a stability/range vs throughput knob.
+Confirm that the relay's `/home/vind-admin/.ssh/wfb_cluster_ed25519.pub` is present in each
+node's authorised-keys file, including the local node at `127.0.0.1`. On OpenWrt the file is
+`/etc/dropbear/authorized_keys`; on the relay it is `/root/.ssh/authorized_keys`.
 
-## Appendix A: Quick Start Commands
+### 6.5 Apparent link-quality improvement at MCS 1
+
+A lower MCS index applies more robust modulation and coding, which generally improves effective
+link quality and reduces packet loss. Some OSD and telemetry displays report a higher RSSI or
+quality figure when the link is neither saturating nor losing frames. MCS is to be treated as a
+stability-and-range against throughput control, not as a quality metric in itself. The deployed
+value is `mcs_index = 1`.
+
+---
+
+## Appendix A — Quick reference commands
 
 ```sh
-# Relay (cluster server)
+# Relay: restart the cluster server
 sudo systemctl restart wifibroadcast-cluster@gs.service
-# Verify WFB is running and nodes are connected:
-wfb-cli status || true
 
-# CPE: verify monitor is present
+# Relay: confirm the server is running and nodes have registered
+wfb-cli status
+
+# Node: confirm the monitor interface is present
 iw dev | grep -A3 phy0-mon0
+iw dev phy0-mon0 info
 ```
+
+---
+
+## Appendix B — Corrections applied to the source document
+
+| Item | Source document | Corrected value |
+| --- | --- | --- |
+| RF channel | 157 (5785 MHz) | **161 (5805 MHz), HT20** |
+| `ssh_key` | `/root/.ssh/wfb_cluster_ed25519` | **`/home/vind-admin/.ssh/wfb_cluster_ed25519`** |
+| `custom_init_script` | `/usr/sbin/wfb-mon0.sh` | **`sh /usr/sbin/wfb-mon0.sh`** |
+| `api_port` / `stats_port` | 8203 / 8303 in `[cluster]` | **8103 / 8003 in `[gs]`** |
+| WFB-NG source | Clone `svpcom/wfb-ng` and copy the recipe | **Official OpenWrt 24.10.4 package feed** |
+| Node verification command | `wfb-server --version` | **`opkg list-installed \| grep -i wfb-ng`** — `wfb-server` is not installed on the node |
+| Boot-time monitor service | Presented as required | **Not installed; the relay creates the interface at cluster start** |
+
+The addressing plan in this revision (10.5.7.0/24) is already correct and required no
+correction. The complete parameter set, with the supporting evidence, is specified in
+[`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md).

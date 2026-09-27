@@ -1,3 +1,28 @@
+# =============================================================================
+# [PXLABS] NOTICE — SUPERSEDED RECIPE. NOT A BUILD INPUT FOR THE DEPLOYED IMAGE.
+# =============================================================================
+# [PXLABS]
+# [PXLABS] Status:   Superseded. Retained for historical traceability only.
+# [PXLABS] Deployed: wfb-ng 25.01-r1, supplied by the official OpenWrt 24.10.4
+# [PXLABS]           package feed and resolved automatically by the ImageBuilder.
+# [PXLABS]
+# [PXLABS] This recipe builds wfb-ng 24.9.7-r2 from svpcom/wfb-ng@3a05304. It
+# [PXLABS] represents an earlier approach that compiled the package locally in the
+# [PXLABS] OpenWrt SDK. That approach was abandoned once the package was found in
+# [PXLABS] the official feed. It did not contribute to the committed firmware
+# [PXLABS] image, as established by two facts:
+# [PXLABS]
+# [PXLABS]   - the resulting .ipk files were staged in the ImageBuilder's
+# [PXLABS]     packages-local/ directory, whose index file Packages is zero bytes;
+# [PXLABS]   - repositories.conf declares the local repository as file:packages,
+# [PXLABS]     not packages-local.
+# [PXLABS]
+# [PXLABS] Do not use this recipe as a build input. To reproduce the deployed
+# [PXLABS] image, follow README.md section 7.1.
+# [PXLABS]
+# [PXLABS] Reference: README.md section 3 and section 3.1.
+# =============================================================================
+
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=wfb-ng
