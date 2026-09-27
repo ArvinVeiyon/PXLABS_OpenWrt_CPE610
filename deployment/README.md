@@ -4,7 +4,7 @@
 | --- | --- |
 | Document type | Configuration records annex |
 | Capture date | 2026-09-26 |
-| Revision | 1.1 |
+| Revision | 1.2 |
 | Date | 2026-09-27 |
 | Status | Current |
 | Subject | The configuration in force on the deployed CPE610 v2 node |

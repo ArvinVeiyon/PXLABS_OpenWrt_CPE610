@@ -30,6 +30,8 @@ fault isolated to that hop by Section 7 is handed over, not diagnosed here.
 | [`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md) | Authoritative parameter values and expected readings |
 | [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md) | Installation and commissioning procedure |
 | [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md) | Cluster configuration, systemd unit, cluster troubleshooting |
+| [`DOCUMENT_REGISTER.md`](DOCUMENT_REGISTER.md) | Document revisions, precedence, and the revision each release shipped |
+| `../CHANGELOG.md` | What changed in each release, and the items carried forward |
 | `../README.md` | Build reproduction, image records, repository layout |
 | `../deployment/README.md` | The configuration in force on the node, as captured |
 

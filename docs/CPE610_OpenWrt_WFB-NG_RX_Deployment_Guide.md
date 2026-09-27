@@ -4,7 +4,7 @@
 | --- | --- |
 | Document type | Installation and commissioning manual |
 | Applies to | TP-Link CPE610 v2 · ath79 / mips_24kc · OpenWrt 24.10.4 · WFB-NG 25.01-r1 |
-| Revision | 2.0 |
+| Revision | 2.1 |
 | Date | 2026-09-27 |
 | Status | Current |
 | Source document | `CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.docx`, converted 2026-09-26 |
@@ -896,5 +896,7 @@ Where the deployed configuration is changed, update
 | [`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md) | **Authoritative** parameter reference: RF, cluster topology, addressing, ports, streams and FEC, security findings |
 | [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md) | Cluster deployment manual: systemd unit definition, per-profile environment, troubleshooting |
 | [`CPE610_Operations_and_Maintenance_Manual.md`](CPE610_Operations_and_Maintenance_Manual.md) | Operations and maintenance: routine checks, logging, restart order, fault isolation, recovery and rollback, replacement units |
+| [`DOCUMENT_REGISTER.md`](DOCUMENT_REGISTER.md) | Document revisions, precedence, and the revision each release shipped |
+| `../CHANGELOG.md` | What changed in each release |
 | `../README.md` | Technical reference: WFB-NG provenance, repository layout, image records, exclusions |
 | `../deployment/README.md` | Configuration records annex: the configuration in force on the node |

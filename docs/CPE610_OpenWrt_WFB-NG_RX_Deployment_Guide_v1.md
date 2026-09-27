@@ -4,7 +4,7 @@
 | --- | --- |
 | Document type | Operational deployment manual (distributed / cluster operation) |
 | Applies to | TP-Link CPE610 v2 receive node and relay-station cluster server, SSH cluster mode |
-| Revision | 1.1 |
+| Revision | 1.2 |
 | Date | 2026-09-27 |
 | Status | Current |
 | Source document | `CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.docx`, dated 27 Dec 2025, converted 2026-09-26 |
@@ -31,6 +31,8 @@
 | [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md) | Installation and commissioning manual: the complete sequential procedure from firmware construction through flashing, node configuration and commissioning acceptance. Use that document for a first installation; use this one for cluster-specific configuration, the systemd unit and troubleshooting. |
 | [`DEPLOYED_PARAMETERS.md`](DEPLOYED_PARAMETERS.md) | **Authoritative** parameter reference |
 | [`CPE610_Operations_and_Maintenance_Manual.md`](CPE610_Operations_and_Maintenance_Manual.md) | Operations and maintenance: the node in service — routine checks, logging, restart order, fault isolation, recovery and rollback |
+| [`DOCUMENT_REGISTER.md`](DOCUMENT_REGISTER.md) | Document revisions, precedence, and the revision each release shipped |
+| `../CHANGELOG.md` | What changed in each release |
 | `../README.md` | Technical reference: WFB-NG provenance, repository layout, image records |
 | `../deployment/README.md` | Configuration records annex |
 

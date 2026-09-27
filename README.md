@@ -7,7 +7,7 @@ two-node `wifibroadcast-cluster@gs` WFB-NG cluster.
 | --- | --- |
 | Document type | Technical reference |
 | Applies to | TP-Link CPE610 v2, OpenWrt 24.10.4 (`r28959-29397011cc`), WFB-NG 25.01-r1 |
-| Revision | 1.1 |
+| Revision | 1.2 |
 | Date | 2026-09-27 |
 | Status | Current |
 | Authoritative parameter source | [`docs/DEPLOYED_PARAMETERS.md`](docs/DEPLOYED_PARAMETERS.md) |
@@ -163,7 +163,9 @@ docs/
   DEPLOYED_PARAMETERS.md          Authoritative parameter reference — consult first
   *_Deployment_Guide.md           Installation, commissioning and cluster deployment manuals
   *_Operations_and_Maintenance_*  In-service operation, fault isolation, recovery and rollback
+  DOCUMENT_REGISTER.md            Document revisions, precedence, and what each release shipped
   *_Deployment_Guide*.docx        Source Word documents, retained unaltered
+CHANGELOG.md                      What changed in each release
 ```
 
 No package recipes are held in this repository. WFB-NG is supplied by the official OpenWrt feed

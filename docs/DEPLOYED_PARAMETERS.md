@@ -4,7 +4,7 @@
 | --- | --- |
 | Document type | Parameter reference |
 | Applies to | CPE610 v2 receive node and relay `vind-rly`, `wifibroadcast-cluster@gs` |
-| Revision | 1.1 |
+| Revision | 1.2 |
 | Date | 2026-09-27 |
 | Status | Current — authoritative |
 | Verified | 2026-09-26, against the live relay configuration and the node records |
@@ -25,6 +25,8 @@ the date on which two-node RF cluster operation was first confirmed end to end.
 | [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide.md) | Installation and commissioning procedure |
 | [`CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md`](CPE610_OpenWrt_WFB-NG_RX_Deployment_Guide_v1.md) | Cluster configuration, systemd unit, cluster troubleshooting |
 | [`CPE610_Operations_and_Maintenance_Manual.md`](CPE610_Operations_and_Maintenance_Manual.md) | The node in service: routine checks, logging, restart order, fault isolation, recovery and rollback |
+| [`DOCUMENT_REGISTER.md`](DOCUMENT_REGISTER.md) | Document revisions, precedence, and the revision each release shipped |
+| `../CHANGELOG.md` | What changed in each release |
 | `../README.md` | Build reproduction, image records, repository layout |
 | `../deployment/README.md` | The configuration in force on the node, as captured |
 
