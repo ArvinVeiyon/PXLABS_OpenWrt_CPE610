@@ -82,8 +82,10 @@ The `option key` value in `etc/config/wireless` is redacted. The residential SSI
 key is not stored in version control. No private keys are held in this directory and none are
 to be added.
 
-**Open finding.** The upstream `Relay_Station_Pxlabs` repository from which these files were
-retrieved is public and retains genuine `gs.key`, `drone.key` and `wfb_cluster_ed25519`. This
-is recorded as an open item in
-[`../docs/DEPLOYED_PARAMETERS.md`](../docs/DEPLOYED_PARAMETERS.md#10-security). Remediation
-requires key rotation together with a history purge; a deletion commit is not sufficient.
+**Key material in the upstream records repository — risk accepted.** The link and SSH keypairs
+associated with this installation are present in the upstream repository from which these files
+were retrieved. The operator has assessed this as acceptable on the grounds that the
+installation is a test vehicle, and no rotation is scheduled. Recorded as an accepted risk on
+2026-09-27; see
+[`../docs/DEPLOYED_PARAMETERS.md`](../docs/DEPLOYED_PARAMETERS.md#10-security). The acceptance
+is scoped to the test installation and does not extend to any production vehicle.

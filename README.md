@@ -357,12 +357,16 @@ excluded by `.gitignore`, and the residential SSID pre-shared key in
 `deployment/etc/config/wireless` is redacted. Generate WFB-NG keypairs with `wfb_keygen`, from
 the `wfb-ng-full` package, and distribute them out of band.
 
-**Open finding, tracked outside this repository.** The public `ArvinVeiyon/Relay_Station_Pxlabs`
-repository — the upstream source of the `deployment/` records — retains genuine `gs.key`,
-`drone.key` and `wfb_cluster_ed25519` on its default branch, retrievable without
-authentication. Remediation requires key rotation together with a history purge; a deletion
-commit is not sufficient. Details are recorded in
+**Key material in the upstream records repository — risk accepted.** The link and SSH keypairs
+associated with this installation are present in the upstream repository from which the
+`deployment/` records were taken. The operator has assessed this as acceptable on the grounds
+that the installation is a **test vehicle**, and no rotation is scheduled. Recorded as an
+accepted risk on 2026-09-27; see
 [`docs/DEPLOYED_PARAMETERS.md`](docs/DEPLOYED_PARAMETERS.md#10-security).
+
+**CAUTION.** This acceptance is scoped to the test installation. The affected keypairs are not
+to be carried onto any production vehicle or any host outside this test rig. A production
+deployment requires freshly generated keys.
 
 ---
 

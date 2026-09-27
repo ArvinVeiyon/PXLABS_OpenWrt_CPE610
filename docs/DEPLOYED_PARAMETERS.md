@@ -255,17 +255,32 @@ and transferring the resulting `.ipk` to the node over Ethernet.
 
 ## 10 Security
 
-Three findings are open. All are tracked outside this repository.
+### 10.1 Key material in the upstream records repository — risk accepted
 
-1. **`ArvinVeiyon/Relay_Station_Pxlabs` is public and its `master` branch contains genuine
-   private keys** — `System_files/etc/gs.key` and `System_files/etc/drone.key` (WFB-NG
-   keypairs), and `System_files/home/vind-admin/.ssh/wfb_cluster_ed25519` (an OpenSSH private
-   key). All three are retrievable without authentication. A party holding the WFB-NG keypairs
-   can decrypt the link and inject into it. Remediation requires key rotation — `wfb_keygen`
-   and a fresh ed25519 key — together with a history purge. Deleting the files in a new commit
-   is not sufficient.
-2. The node's `etc/config/dropbear` has `PasswordAuth` and `RootPasswordAuth` both set to
-   `on`, while key-based authentication from the relay is already functional. Both may be
-   disabled. Recorded as found; not yet changed.
-3. No key material is held in this repository. `*.key` is excluded by `.gitignore`. This
-   condition is to be maintained.
+The WFB-NG link keypairs and the cluster SSH private key associated with this installation are
+present in the upstream repository from which the `deployment/` records were taken. A party
+holding the link keypairs can decrypt and inject into the RF link.
+
+| Field | Entry |
+| --- | --- |
+| Status | **Accepted risk.** No rotation scheduled. |
+| Accepted by | Operator, 2026-09-27 |
+| Basis | The installation is a test vehicle. No operational or safety-of-flight consequence is carried by the affected link. |
+| Scope of acceptance | This test installation only |
+
+**CAUTION — scope limit.** The acceptance does not extend beyond the test rig. The affected
+keypairs are not to be reused on a production vehicle, or on any host outside this
+installation. A production deployment requires freshly generated material: `wfb_keygen` for the
+link keypairs and a new ed25519 key for cluster SSH, distributed out of band.
+
+### 10.2 Node SSH authentication
+
+The node's `etc/config/dropbear` has `PasswordAuth` and `RootPasswordAuth` both set to `on`,
+while key-based authentication from the relay is already functional. Both may be disabled.
+Recorded as found; not yet changed.
+
+### 10.3 This repository
+
+No key material is held in this repository. `*.key` is excluded by `.gitignore`, and the
+residential SSID pre-shared key in `deployment/etc/config/wireless` is redacted. This condition
+is to be maintained irrespective of Section 10.1.
